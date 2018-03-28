@@ -33,14 +33,15 @@ SETS = {
     u'GANGS'   : ("MSG",       9),
     u'UNGORO'  : ("Un'Goro",  10),
     u'ICECROWN' : ("KFT",     11),
-    u'LOOTAPALOOZA' : ("KAC", 12)
+    u'LOOTAPALOOZA' : ("KnC", 12),
+    u'WITCHWOOD' : ("WW", 13)
 }
 
 # Ordering for HMC #Rarity and #Class columns
 RARITY   = ["Basic", "Common", "Rare", "Epic", "Legendary"]
 CLASSES  = ["", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior", "Neutral"]
 # Sets currently included in standard format
-STANDARD = ["TOG", "Kara", "MSG", "Un'Goro", "KFT", "KAC"]
+STANDARD = ["Un'Goro", "KFT", "KnC", "WW"]
 
 
 # Add a few useful command line arguments
@@ -66,15 +67,16 @@ def load_data(filename):
 # Convert card text into ASCII, replacing special characters
 # and removing markup, extra whitespace, newlines and formatting codes.
 def normalize_text(ustring):
-    # If a keyword is separated from text (or other keywords) by a newline, insert
-    # a period, as the newlines will be removed.
-
+    # If a keyword is separated from other content by a newline, insert
+    # a period. Newlines will be removed.
 
     # "Wax Elemental":  <b>Taunt</b>\n<b>Divine Shield</b>
     # "Vulgar Homunculus": <b>Taunt</b>\n<b>Battlecry:</b> Deal ..
     # "Shellshifter": [x]<b>Choose One - </b>Transform\ninto a 5/3 with <b>Stealth</b>;\nor a 3/5 with <b>Taunt</b>.
     # "Al'Akir": <b>Charge, Divine Shield, Taunt, Windfury</b>
-    ustring = re.sub(r'</b>\s*\n\s*', '</b>. ', ustring)
+    # "Dragonhawk Rider": <b>Inspire:</b> Gain <b>Windfury</b>\nthis turn.
+    # "Skycap'n Kragg": <b>Charrrrrge</b>\nCosts (1) less for each friendly Pirate.
+    ustring = re.sub(r'</b>\s*\n\s*([^a-z])', r'</b>. \1', ustring)
 
     # Replace other newlines + space with a single space.
     ustring = re.sub(r'\s*\n\s*', ' ', ustring)
@@ -124,7 +126,9 @@ def normalize_type(card):
     if u'multiClassGroup' in card:
         # This needs to be revisited if multi-class mechanics ever return
         gangs = {u'GRIMY_GOONS': "Goon", u'KABAL' : "Kabal", u'JADE_LOTUS' : "Lotus"}
-        subtype = gangs[card[u'multiClassGroup']]
+        # Do not overwrite existing subtype, e.g. Elemental for Jade Spirit
+        if subtype == None:
+            subtype = gangs[card[u'multiClassGroup']]
     # Rewritings of otherwise correct values
     if subtype == "Mechanical":
         subtype = "Mech"
@@ -134,47 +138,50 @@ def normalize_type(card):
 # Keywords are available in "mechanics" and "referencedTags" attributes, but not all of them
 # are keywords. Also spelling is a bit different in HMC. Fix all that.
 def normalize_keywords(card):
-    # Keywords that will be included in "Keywords" column
+    # Keywords that will be included in "Keywords" column, and a flag if also referencedTags
+    # appearances are considered.
     KEYWORDS = {
-        u'AURA':            'Aura',
-        u'BATTLECRY':       'Battlecry',
-        u'CANT_ATTACK':     'Can\'t Attack',
-        u'CHARGE':          'Charge',
-        u'CHOOSE_ONE':      'Choose One',
-        u'COMBO':           'Combo',
-        u'DEATHRATTLE':     'Deathrattle',
-        u'DISCOVER':        'Discover',
-        u'DIVINE_SHIELD':   'Divine Shield',
-        u'ENRAGED':         'Enrage',
-        u'INSPIRE':         'Inspire',
-        u'LIFESTEAL':       'Lifesteal',
-        u'OVERLOAD':        'Overload',
-        u'POISONOUS':       'Poisonous',
-        u'RECRUIT':         'Recruit',
-        u'SECRET':          'Secret',
-        u'SPELLPOWER':      'Spell Damage',
-        u'STEALTH':         'Stealth',
-        u'TAUNT':           'Taunt',
-        u'WINDFURY':        'Windfury'
+        u'ADAPT':           ('Adapt', True),
+        u'AURA':            ('Aura', False),
+        u'BATTLECRY':       ('Battlecry', False),
+        u'CANT_ATTACK':     ('Can\'t Attack', False),
+        u'CHARGE':          ('Charge', False),
+        u'CHOOSE_ONE':      ('Choose One', False),
+        u'COMBO':           ('Combo', False),
+        u'DEATHRATTLE':     ('Deathrattle', False),
+        u'DISCOVER':        ('Discover', True),
+        u'DIVINE_SHIELD':   ('Divine Shield', False),
+        u'ECHO':            ('Echo', False),
+        u'FREEZE':          ('Freeze', True),
+        u'INSPIRE':         ('Inspire', False),
+        u'LIFESTEAL':       ('Lifesteal', False),
+        u'OVERLOAD':        ('Overload', False),
+        u'POISONOUS':       ('Poisonous', True),
+        u'RECRUIT':         ('Recruit', True),
+        u'RUSH':            ('Rush', False),
+        u'SECRET':          ('Secret', False),
+        u'SPELLPOWER':      ('Spell Damage', True),
+        u'STEALTH':         ('Stealth', False),
+        u'TAUNT':           ('Taunt', True),
+        u'WINDFURY':        ('Windfury', False)
     }
 
-    # TODO it is questionable whether all instances should be listed as keywords.
-    # In most cases only the "mechanics" should be included (so that e.g. Mad Scientist
-    # and Glacial Mysteries would not have "Secret" in them.)
+    # In most cases only the keywords in field "mechanics" should be included (so that
+    # e.g. Mad Scientist and Glacial Mysteries would not have "Secret" in them.)
     # On the other hand, "Recruit" only exists in "referencedTags" and should be kept.
-    # Probably the best solution is to include another field in the above dictionary
-    # to indicate case by case whether keywords in referencedTags should be kept.
+    # HMC sheet is somewhat inconsistent in it's use of keywords, the above flags are
+    # chosen to best fit the previous versions with manual input.
 
-    # Use a set instead of list to avoid inserting an entry multiple times
+    # Using a set instead of list to avoid inserting an entry multiple times
     keywords = set()
     if u'mechanics' in card:
         for mechanic in card[u'mechanics']:
             if mechanic in KEYWORDS:
-                keywords.add(KEYWORDS[mechanic])
+                keywords.add(KEYWORDS[mechanic][0])
     if u'referencedTags' in card:
         for tag in card[u'referencedTags']:
-            if tag in KEYWORDS:
-                keywords.add(KEYWORDS[tag])
+            if tag in KEYWORDS and KEYWORDS[tag][1]:
+                keywords.add(KEYWORDS[tag][0])
 
     # Always return the keywords in sorted order to have some structure.
     return sorted(keywords)
@@ -229,6 +236,9 @@ def parse(card):
 # Generate a spreadsheet from reformatted card data.
 def output(cards, outfile):
     wb = Workbook()
+    
+    # For really old versions of openpyxl
+    # ws = wb.get_active_sheet()
     ws = wb.active
 
     # Write headers
