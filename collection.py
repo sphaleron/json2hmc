@@ -34,14 +34,14 @@ SETS = {
     u'UNGORO'  : ("Un'Goro",  10),
     u'ICECROWN' : ("KFT",     11),
     u'LOOTAPALOOZA' : ("KnC", 12),
-    u'WITCHWOOD' : ("WW", 13)
+    u'GILNEAS' : ("Woods", 13)
 }
 
 # Ordering for HMC #Rarity and #Class columns
 RARITY   = ["Basic", "Common", "Rare", "Epic", "Legendary"]
 CLASSES  = ["", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior", "Neutral"]
 # Sets currently included in standard format
-STANDARD = ["Un'Goro", "KFT", "KnC", "WW"]
+STANDARD = ["Un'Goro", "KFT", "KnC", "Woods"]
 
 
 # Add a few useful command line arguments
@@ -198,6 +198,9 @@ def parse(card):
         normalized["Rarity"] = card[u'rarity'].capitalize().encode('ascii')
         if normalized["Rarity"] == "Free":
             normalized["Rarity"] = "Basic"
+        if u'set' not in card:
+            # Workaround for cards HOF'ed in Witchwood missing set attribute
+            card[u'set'] = u'HOF'
         normalized["Collection"] = SETS[card[u'set']][0]
         if normalized["Collection"] in STANDARD:
             normalized["Format"] = "Standard"
@@ -236,14 +239,14 @@ def parse(card):
 # Generate a spreadsheet from reformatted card data.
 def output(cards, outfile):
     wb = Workbook()
-    
+
     # For really old versions of openpyxl
     # ws = wb.get_active_sheet()
     ws = wb.active
 
     # Write headers
-    headers = [None, "Mana", "Name", "Rarity", "Collection", "Class", "Normal", "Golden",
-               "1st Copy", "2nd Copy", "Type", "Sub-Type", "ATK", "HP", "Card Text",
+    headers = [None, "Mana", "Name", "Rarity", "Collection", "Class", "N", "G",
+               "W1", "W2", "Type", "Sub-Type", "ATK", "HP", "Card Text",
                "Keywords", "Format", "N-SB-Lookup", "G-SB-Lookup", "Tier List", None,
                "#Rarity", "#Collection", "#Class"]
     ws.append(headers)
