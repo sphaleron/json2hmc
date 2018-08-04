@@ -34,14 +34,15 @@ SETS = {
     u'UNGORO'  : ("Un'Goro",  10),
     u'ICECROWN' : ("KFT",     11),
     u'LOOTAPALOOZA' : ("KnC", 12),
-    u'GILNEAS' : ("Woods", 13)
+    u'GILNEAS' : ("Woods", 13),
+    u'BOOMSDAY' : ("Boom", 14)
 }
 
 # Ordering for HMC #Rarity and #Class columns
 RARITY   = ["Basic", "Common", "Rare", "Epic", "Legendary"]
 CLASSES  = ["", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior", "Neutral"]
 # Sets currently included in standard format
-STANDARD = ["Un'Goro", "KFT", "KnC", "Woods"]
+STANDARD = ["Un'Goro", "KFT", "KnC", "Woods", "Boom"]
 
 
 # Add a few useful command line arguments
@@ -108,11 +109,11 @@ def normalize_text(ustring):
 # Correct those to match existing spreadsheet conventions more closely.
 def normalize_type(card):
     # By default use the type provided in JSON
-    ctype   = card[u'type'].capitalize().encode('ascii')
+    ctype   = card[u'type'].capitalize()
     subtype = None
 
     if u'race' in card:
-        subtype = card[u'race'].capitalize().encode('ascii')
+        subtype = card[u'race'].capitalize()
 
     # Some types or subtypes with specific values in HMC can be identified by mechanics
     if u'mechanics' in card:
@@ -155,8 +156,9 @@ def normalize_keywords(card):
         u'FREEZE':          ('Freeze', True),
         u'INSPIRE':         ('Inspire', False),
         u'LIFESTEAL':       ('Lifesteal', False),
+        u'MODULAR':         ('Magnetic', False),
         u'OVERLOAD':        ('Overload', False),
-        u'POISONOUS':       ('Poisonous', True),
+        u'POISONOUS':       ('Poisonous', False),
         u'RECRUIT':         ('Recruit', True),
         u'RUSH':            ('Rush', False),
         u'SECRET':          ('Secret', False),
@@ -194,8 +196,8 @@ def parse(card):
 
     try:
         normalized["Mana"] = card[u'cost']
-        normalized["Name"] = card[u'name'].encode('ascii')
-        normalized["Rarity"] = card[u'rarity'].capitalize().encode('ascii')
+        normalized["Name"] = card[u'name']
+        normalized["Rarity"] = card[u'rarity'].capitalize()
         if normalized["Rarity"] == "Free":
             normalized["Rarity"] = "Basic"
         if u'set' not in card:
@@ -207,7 +209,7 @@ def parse(card):
         else:
             normalized["Format"] = "Wild"
 
-        normalized["Class"] = card[u'cardClass'].capitalize().encode('ascii')
+        normalized["Class"] = card[u'cardClass'].capitalize()
         ctype, subtype = normalize_type(card)
         normalized["Type"]  = ctype
         if subtype:
@@ -241,8 +243,8 @@ def output(cards, outfile):
     wb = Workbook()
 
     # For really old versions of openpyxl
-    # ws = wb.get_active_sheet()
-    ws = wb.active
+    ws = wb.get_active_sheet()
+    #ws = wb.active
 
     # Write headers
     headers = [None, "Mana", "Name", "Rarity", "Collection", "Class", "N", "G",
